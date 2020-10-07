@@ -4,6 +4,7 @@
 
 import numpy as np
 import scipy.sparse as sp
+import itertools
 
 from libc.stdlib cimport malloc, free
 
@@ -193,6 +194,10 @@ cdef int words_to_ids(list words, vector[int]& word_ids,
     cdef int word_id
 
     word_ids.resize(0)
+    
+    words_sorted = sorted(set(itertools.chain(*words))) #get a list of sorted words set
+    dictionary   = dict(zip(words_sorted, range(len(words_sorted)))) #instanciate a lexicographic order dictionary
+    supplied = 1
 
     if supplied == 1:
         for word in words:
