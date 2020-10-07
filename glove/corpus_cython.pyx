@@ -195,10 +195,7 @@ cdef int words_to_ids(list words, vector[int]& word_ids,
 
     word_ids.resize(0)
     
-    words_sorted = sorted(set(itertools.chain(*words))) #get a list of sorted words set
-    dictionary   = dict(zip(words_sorted, range(len(words_sorted)))) #instanciate a lexicographic order dictionary
-    supplied = 1
-
+    
     if supplied == 1:
         for word in words:
             # Raise an error if the word
@@ -219,11 +216,15 @@ cdef int words_to_ids(list words, vector[int]& word_ids,
     return 0
 
 
-def construct_cooccurrence_matrix(corpus, dictionary, int supplied,
-                                  int window_size, int ignore_missing):
+def construct_cooccurrence_matrix(corpus, int window_size):
     """
     Construct the word-id dictionary and cooccurrence matrix for
     a given corpus, using a given window size.
+    
+    The dictionary is constructed in a lexicographic order manner.
+    The matrix accounts for the number of cooccurrences of words, no matter the
+    order in which they appear in the corpus. Consequently, the cooccurrence
+    matrix is upper triangular (undirected graph in community2vec) .
 
     Returns the dictionary and a scipy.sparse COO cooccurrence matrix.
     """
@@ -240,6 +241,14 @@ def construct_cooccurrence_matrix(corpus, dictionary, int supplied,
     # Pre-allocate some reasonable size
     # for the word ids vector.
     word_ids.reserve(1000)
+
+    #Addition to use a lexicographic order dictionary and get a top right triangular matrix
+    words_sorted = sorted(set(itertools.chain(*corpus))) #get a list of sorted words set
+    dictionary   = dict(zip(words_sorted, range(len(words_sorted)))) #instanciate a lexicographic order dictionary
+    del words_sorted
+    supplied = 1
+    ignore_missing = 1 
+
 
     # Iterate over the corpus.
     for words in corpus:
@@ -271,20 +280,21 @@ def construct_cooccurrence_matrix(corpus, dictionary, int supplied,
                 # Do nothing if the words are the same.
                 if inner_word == outer_word:
                     continue
-
+               # else:
+                # Each cooccurrence is counted as 1, cooccurrence(w_1, w_2) == cooccurrence(w_2, w_1) because the graph is undirected in community2vec, subsequently, the matrix is upper triangular with cooccurrence(w_i, w_i) == 0
                 if inner_word < outer_word:
                     increment_matrix(matrix,
                                      inner_word,
                                      outer_word,
-                                     1.0 / (j - i))
+                                     2) # We increment the matrix by 2 because we record the cooccurrence of w_1 w_2 and the cooccurrence of w_2 w_1
                 else:
                     increment_matrix(matrix,
                                      outer_word,
                                      inner_word,
-                                     1.0 / (j - i))
+                                     2)
 
     # Create the matrix.
     mat = matrix_to_coo(matrix, len(dictionary))
     free_matrix(matrix)
 
-    return mat
+    return mat, dictionary

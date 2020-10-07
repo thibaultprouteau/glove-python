@@ -57,11 +57,8 @@ class Corpus(object):
                                If False, a KeyError is raised.
         """
 
-        self.matrix = construct_cooccurrence_matrix(corpus,
-                                                    self.dictionary,
-                                                    int(self.dictionary_supplied),
-                                                    int(window),
-                                                    int(ignore_missing))
+        self.matrix, self.dictionary = construct_cooccurrence_matrix(corpus,
+                                                    int(window))
 
     def save(self, filename):
 
